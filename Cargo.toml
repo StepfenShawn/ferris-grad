@@ -1,0 +1,8 @@
+[package]
+name = "ferris_grad"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.101"
+ndarray = "0.17.2"
