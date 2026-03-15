@@ -3,14 +3,10 @@ use anyhow::Result;
 use engine::Tensor;
 
 fn main() -> Result<()> {
-    let a = Tensor::from_vec([1.0, 2.0, 3.0].into(), [3].into(), true)?;
-    println!("{:?}", a);
-    println!("shape: {:?}", a.shape());
-    println!("ndim: {:?}", a.ndim());
-    println!("size: {:?}", a.size());
-    let b = Tensor::zeros([3, 3].into(), true)?;
-    println!("{:?}", b);
-    let c = Tensor::ones([3, 3].into(), true)?;
-    println!("{:?}", c);
+    let a = Tensor::from_vec([1.0, 2.0, 3.0].into(), [3, 1].into())?;
+    let b = Tensor::zeros([3, 1].into())?;
+    let c = a.clone() + b.clone();
+    let _ = c.backward();
+    println!("{:?} ---------\n {:?}", a.grad(), b.grad());
     Ok(())
 }
