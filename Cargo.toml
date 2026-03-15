@@ -6,6 +6,11 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.101"
 ndarray = "0.17.2"
+rand = "0.10.0"
 
 [features]
 full = []
+
+[lib]
+name = "ferris_grad"
+path = "src/lib.rs"

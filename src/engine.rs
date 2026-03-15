@@ -1,5 +1,5 @@
-use anyhow::Result;
-use ndarray::{ArrayD, IxDyn, Zip, array};
+use anyhow::{Ok, Result};
+use ndarray::{ArrayD, IxDyn, Zip};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 use std::fmt::Debug;
@@ -50,6 +50,14 @@ impl _Tensor {
         Ok(Self::new(arr, Operation::None, Vec::new(), None))
     }
 
+    pub fn from_fn<F>(shape: Vec<usize>, f: F) -> Result<Self>
+    where
+        F: FnMut(IxDyn) -> f32,
+    {
+        let arr = ArrayD::from_shape_fn(IxDyn(&shape), f);
+        Ok(Self::new(arr, Operation::None, Vec::new(), None))
+    }
+
     pub fn shape(&self) -> Vec<usize> {
         self.data.shape().to_vec()
     }
@@ -69,6 +77,13 @@ impl _Tensor {
 
     pub fn ones(shape: Vec<usize>) -> Result<Self> {
         let arr = ArrayD::ones(IxDyn(&shape));
+        Ok(Self::new(arr, Operation::None, Vec::new(), None))
+    }
+
+    pub fn rand(shape: Vec<usize>) -> Result<Self> {
+        let size: usize = shape.iter().product();
+        let data: Vec<f32> = (0..size).map(|_| rand::random::<f32>()).collect();
+        let arr = ArrayD::from_shape_vec(IxDyn(&shape), data)?;
         Ok(Self::new(arr, Operation::None, Vec::new(), None))
     }
 }
@@ -118,8 +133,20 @@ impl Tensor {
     pub fn zeros(shape: Vec<usize>) -> Result<Self> {
         Ok(Self(Rc::new(RefCell::new(_Tensor::zeros(shape)?))))
     }
+
     pub fn ones(shape: Vec<usize>) -> Result<Self> {
         Ok(Self(Rc::new(RefCell::new(_Tensor::ones(shape)?))))
+    }
+
+    pub fn rand(shape: Vec<usize>) -> Result<Self> {
+        Ok(Self(Rc::new(RefCell::new(_Tensor::rand(shape)?))))
+    }
+
+    pub fn from_fn<F>(shape: Vec<usize>, f: F) -> Result<Self>
+    where
+        F: FnMut(IxDyn) -> f32,
+    {
+        Ok(Self(Rc::new(RefCell::new(_Tensor::from_fn(shape, f)?))))
     }
 
     pub fn shape(&self) -> Vec<usize> {
