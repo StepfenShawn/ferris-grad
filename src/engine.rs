@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ndarray::{ArrayD, IxDyn};
+use ndarray::{ArrayD, IxDyn, Zip, array};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 use std::fmt::Debug;
@@ -12,6 +12,8 @@ pub enum Operation {
     None,
     Add,
     Mul,
+    Pow,
+    Tanh,
 }
 
 type PropagateFn = fn(&_Tensor);
@@ -21,31 +23,31 @@ pub struct _Tensor {
     data: ArrayD<f32>,
     grad: ArrayD<f32>,
     op: Operation,
-    parents: Vec<Tensor>,
+    prev: Vec<Tensor>,
     propagate_fn: Option<PropagateFn>,
 }
 
 impl _Tensor {
     pub fn new(
         data: ArrayD<f32>,
-        grad: ArrayD<f32>,
         op: Operation,
-        parents: Vec<Tensor>,
+        prev: Vec<Tensor>,
         propagate_fn: Option<PropagateFn>,
     ) -> Self {
+        let shape = data.shape();
+        let grad = ArrayD::zeros(IxDyn(&shape));
         Self {
-            data,
+            data: data,
             grad,
             op,
-            parents,
+            prev,
             propagate_fn,
         }
     }
 
     pub fn from_vec(data: Vec<f32>, shape: Vec<usize>) -> Result<Self> {
         let arr = ArrayD::from_shape_vec(IxDyn(&shape), data)?;
-        let grad = ArrayD::zeros(IxDyn(&shape));
-        Ok(Self::new(arr, grad, Operation::None, Vec::new(), None))
+        Ok(Self::new(arr, Operation::None, Vec::new(), None))
     }
 
     pub fn shape(&self) -> Vec<usize> {
@@ -62,14 +64,12 @@ impl _Tensor {
 
     pub fn zeros(shape: Vec<usize>) -> Result<Self> {
         let arr = ArrayD::zeros(IxDyn(&shape));
-        let grad = ArrayD::zeros(IxDyn(&shape));
-        Ok(Self::new(arr, grad, Operation::None, Vec::new(), None))
+        Ok(Self::new(arr, Operation::None, Vec::new(), None))
     }
 
     pub fn ones(shape: Vec<usize>) -> Result<Self> {
         let arr = ArrayD::ones(IxDyn(&shape));
-        let grad = ArrayD::zeros(IxDyn(&shape));
-        Ok(Self::new(arr, grad, Operation::None, Vec::new(), None))
+        Ok(Self::new(arr, Operation::None, Vec::new(), None))
     }
 }
 
@@ -152,7 +152,7 @@ impl Tensor {
             if let Some(propagate_fn) = borrowed_tensor.propagate_fn {
                 let _ = propagate_fn(&borrowed_tensor);
             }
-            for child in &borrowed_tensor.parents {
+            for child in &borrowed_tensor.prev {
                 if !visited.contains(child) {
                     queue.push_back(child.clone());
                 }
@@ -160,12 +160,65 @@ impl Tensor {
         }
         Ok(())
     }
+
+    pub fn powf(&self, other: Tensor) -> Tensor {
+        let base_data = self.borrow().data.clone();
+        let power_data = other.borrow().data.clone();
+
+        let result = Zip::from(&base_data)
+            .and(&power_data)
+            .map_collect(|x, y| x.powf(*y));
+
+        let propagate_fn: PropagateFn = |t: &_Tensor| {
+            let mut base = t.prev[0].borrow_mut();
+            let mut power = t.prev[1].borrow_mut();
+
+            let x = base.data.clone();
+            let y = power.data.clone();
+            let out = t.data.clone();
+
+            // d(x^y)/dx = y * x^(y-1)
+            let x_pow_y_minus_1 = Zip::from(&x)
+                .and(&(y.clone() - 1.0))
+                .map_collect(|a, b| a.powf(*b));
+            let base_local_grad = (&y * &x_pow_y_minus_1) * &t.grad;
+            base.grad += &base_local_grad;
+
+            // d(x^y)/dy = x^y * ln(x)
+            let ln_x = x.mapv(|v| v.ln());
+            let power_local_grad = (&out * &ln_x) * &t.grad;
+            power.grad += &power_local_grad;
+        };
+
+        Tensor::new(_Tensor::new(
+            result,
+            Operation::Pow,
+            vec![self.clone(), other],
+            Some(propagate_fn),
+        ))
+    }
+
+    pub fn tanh(&self) -> Tensor {
+        let result = self.borrow().data.tanh();
+        let propagate_fn: PropagateFn = |t: &_Tensor| {
+            let mut _prev = t.prev[0].borrow_mut();
+            // d/dx tanh(x) = 1 - tanh(x)^2
+            let local_grad = &t.grad * &(1.0 - t.data.mapv(|v| v.powi(2)));
+            _prev.grad += &local_grad;
+        };
+        Tensor::new(_Tensor::new(
+            result,
+            Operation::Tanh,
+            vec![self.clone()],
+            Some(propagate_fn),
+        ))
+    }
 }
 
 fn add(a: &Tensor, b: &Tensor) -> Tensor {
     let propagate_fn = |t: &_Tensor| {
-        let mut first_tensor = t.parents[0].borrow_mut();
-        let mut second_tensor = t.parents[1].borrow_mut();
+        let mut first_tensor = t.prev[0].borrow_mut();
+        let mut second_tensor = t.prev[1].borrow_mut();
 
         first_tensor.grad += &t.grad;
         second_tensor.grad += &t.grad;
@@ -175,7 +228,6 @@ fn add(a: &Tensor, b: &Tensor) -> Tensor {
 
     Tensor::new(_Tensor::new(
         result,
-        ArrayD::zeros(IxDyn(&a.shape())),
         Operation::Add,
         vec![a.clone(), b.clone()],
         Some(propagate_fn),
@@ -184,8 +236,8 @@ fn add(a: &Tensor, b: &Tensor) -> Tensor {
 
 fn mul(a: &Tensor, b: &Tensor) -> Tensor {
     let propagate_fn = |t: &_Tensor| {
-        let mut first_tensor = t.parents[0].borrow_mut();
-        let mut second_tensor = t.parents[1].borrow_mut();
+        let mut first_tensor = t.prev[0].borrow_mut();
+        let mut second_tensor = t.prev[1].borrow_mut();
 
         first_tensor.grad += &(second_tensor.data.clone() * &t.grad);
         second_tensor.grad += &(first_tensor.data.clone() * &t.grad);
@@ -194,8 +246,7 @@ fn mul(a: &Tensor, b: &Tensor) -> Tensor {
     let result = a.borrow().data.clone() * b.borrow().data.clone();
 
     Tensor::new(_Tensor::new(
-        result.clone(),
-        ArrayD::zeros(IxDyn(&result.shape())),
+        result,
         Operation::Mul,
         vec![a.clone(), b.clone()],
         Some(propagate_fn),
