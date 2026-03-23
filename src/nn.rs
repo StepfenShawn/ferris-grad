@@ -1,6 +1,6 @@
-use crate::engine::Tensor;
+use crate::tensor::Tensor;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Linear {
     w: Tensor,
     b: Tensor,
@@ -8,17 +8,23 @@ pub struct Linear {
 
 impl Linear {
     pub fn new(nin: usize, nout: usize) -> Linear {
-        let rand_value = rand::random::<f32>();
+        let rand_value = rand::random::<f64>();
         Linear {
             w: Tensor::rand(vec![nin, nout]).expect("failed to create w"),
-            b: Tensor::from_fn(vec![nout], |_| {rand_value}).expect("failed to crate b"),
+            b: Tensor::from_fn(vec![nout], |_| rand_value).expect("failed to crate b"),
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MLP {
     layers: Vec<Linear>,
+}
+
+impl MLP {
+    pub fn new(layers: Vec<Linear>) -> MLP {
+        MLP { layers }
+    }
 }
 
 pub trait Module {
@@ -41,10 +47,7 @@ impl Module for Linear {
 
 impl Module for MLP {
     fn parameters(&self) -> Vec<Tensor> {
-        self.layers
-            .get(0)
-            .expect("MLP has no layers")
-            .parameters()
+        self.layers.get(0).expect("MLP has no layers").parameters()
     }
 
     fn forward(&self, inputs: &Tensor) -> Tensor {
