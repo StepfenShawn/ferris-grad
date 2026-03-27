@@ -1,4 +1,4 @@
-use crate::tensor::Tensor;
+use crate::{scalar::Scalar, tensor::Tensor};
 
 #[derive(Clone, Debug)]
 pub struct Linear {
@@ -11,7 +11,8 @@ impl Linear {
         let rand_value = rand::random::<f64>();
         Linear {
             w: Tensor::rand(vec![nin, nout]).expect("failed to create w"),
-            b: Tensor::from_fn(vec![nout], |_| rand_value).expect("failed to crate b"),
+            b: Tensor::from_fn(vec![nout], |_| Scalar::from_f64(rand_value))
+                .expect("failed to crate b"),
         }
     }
 }
@@ -41,7 +42,7 @@ impl Module for Linear {
     }
 
     fn forward(&self, inputs: &Tensor) -> Tensor {
-        inputs.clone() * self.w.clone() + self.b.clone()
+        inputs.dot(&self.w).unwrap() + self.b.clone()
     }
 }
 

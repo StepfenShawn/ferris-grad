@@ -1,17 +1,18 @@
 # ferris_grad
 Pytorch-like autograd engine in Rust[wip]:  
 
+# Examples
 ```rust
-mod engine;
 use anyhow::Result;
-use engine::Tensor;
+use ferris_grad::Tensor;
 
 fn main() -> Result<()> {
-    let a = Tensor::from_vec([1.0, 2.0, 3.0].into(), [3, 1].into())?;
-    let b = Tensor::zeros([3, 1].into())?;
-    let c = a * b;
-    let _ = c.backward();
-    println!("{:?}", c.grad());
+    let a = Tensor::from_vec(vec![1.0.into(), 2.0.into(), 3.0.into()], [3, 1].into())?;
+    let b = Tensor::rand([3, 1].into())?;
+    let c = &a * &b;
+    println!("{:?}", c);
+    c.get((1, 0)).backward();
+    println!("{:?}", a.get((1, 0)).grad());
     Ok(())
 }
 ```

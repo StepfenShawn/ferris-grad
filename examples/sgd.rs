@@ -9,9 +9,9 @@ fn main() -> Result<()> {
             vec![5.5, 1.0, 6.0],
             vec![11.0, 1.0, 1.0],
         ]
-        .into_iter()
+        .iter()
         .flatten()
-        .map(|x| Scalar::from_f64(*x))
+        .map(|x| (*x).into())
         .collect::<Vec<Scalar>>(),
         [4, 3].into(),
     )?;
@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     let target_outputs = Tensor::from_vec(
         vec![1.0, 2.0, 3.0, 2.0]
             .iter()
-            .map(|x| Scalar::from_f64(*x))
+            .map(|x| (*x).into())
             .collect::<Vec<Scalar>>(),
         [1, 4].into(),
     )?;
@@ -27,8 +27,15 @@ fn main() -> Result<()> {
     let network = MLP::new(vec![Linear::new(3, 4)]);
     println!("{:?}", training_inputs);
     println!("{:?}", network);
-    for _ in 0..100 {
-        println!("{:?}", network.forward(&training_inputs));
+
+    for i in 0..100 {
+        let loss = (&network.forward(&training_inputs) - &target_outputs).sum();
+        loss.backward();
+        println!("Loss: {:?}", loss.data());
+        // for param in network.parameters() {
+        //     let grad = param.grad() * 0.01;
+        //     param.data = param.data - grad;
+        // }
     }
     Ok(())
 }

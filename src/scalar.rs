@@ -2,7 +2,8 @@ use std::{
     cell::RefCell,
     collections::{HashSet, VecDeque},
     hash::Hash,
-    ops::{Add, Deref, Mul},
+    iter::Sum,
+    ops::{Add, Deref, Mul, Neg, Sub},
     rc::Rc,
 };
 
@@ -69,11 +70,15 @@ impl Scalar {
         self.0.borrow().grad
     }
 
+    pub fn data(&self) -> f64 {
+        self.0.borrow().data
+    }
+
     pub fn backward(&self) {
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         queue.push_back(self.clone());
-        self.borrow_mut().grad = 0.;
+        self.borrow_mut().grad = 1.;
         while let Some(ref scalar) = queue.pop_front() {
             if visited.contains(scalar) {
                 continue;
@@ -92,6 +97,41 @@ impl Scalar {
     }
 }
 
+impl Scalar {
+    pub fn pow(&self, other: &Scalar) -> Scalar {
+        let result = self.data().powf(other.data());
+        let propagate_fn = |v: &_Scalar| {
+            let mut base_scalar = v.prev[0].borrow_mut();
+            let power_scalar = v.prev[1].borrow_mut();
+            base_scalar.grad +=
+                power_scalar.data * (base_scalar.data.powf(power_scalar.data - 1.)) * v.grad;
+        };
+
+        Scalar::new(_Scalar {
+            data: result,
+            grad: 0.,
+            op: Operation::Pow,
+            prev: vec![self.clone(), other.clone()],
+            propagate_fn: Some(propagate_fn),
+        })
+    }
+
+    pub fn tanh(&self) -> Scalar {
+        let result = self.data().tanh();
+        let propagate_fn = |v: &_Scalar| {
+            let mut prev = v.prev[0].borrow_mut();
+            prev.grad += (1.0 - v.data.powf(2.0)) * v.grad;
+        };
+
+        Scalar::new(_Scalar {
+            data: result,
+            grad: 0.,
+            op: Operation::Tanh,
+            prev: vec![self.clone()],
+            propagate_fn: Some(propagate_fn),
+        })
+    }
+}
 fn add(a: &Scalar, b: &Scalar) -> Scalar {
     let propagate_fn = |v: &_Scalar| {
         let mut first_scalar = v.prev[0].borrow_mut();
@@ -101,7 +141,7 @@ fn add(a: &Scalar, b: &Scalar) -> Scalar {
         second_scalar.grad += v.grad;
     };
 
-    let result = a.borrow().data + b.borrow().data;
+    let result = a.data() + b.data();
 
     Scalar::new(_Scalar {
         data: result,
@@ -121,7 +161,7 @@ fn mul(a: &Scalar, b: &Scalar) -> Scalar {
         second_scalar.grad += first_scalar.data * v.grad;
     };
 
-    let result = a.borrow().data * b.borrow().data;
+    let result = a.data() * b.data();
 
     Scalar::new(_Scalar {
         data: result,
@@ -139,10 +179,65 @@ impl Add<Scalar> for Scalar {
     }
 }
 
+impl<'a, 'b> Add<&'b Scalar> for &'a Scalar {
+    type Output = Scalar;
+    fn add(self, other: &'b Scalar) -> Self::Output {
+        add(self, other)
+    }
+}
+
 impl Mul<Scalar> for Scalar {
     type Output = Scalar;
 
     fn mul(self, other: Scalar) -> Self::Output {
         mul(&self, &other)
+    }
+}
+
+impl<'a, 'b> Mul<&'b Scalar> for &'a Scalar {
+    type Output = Scalar;
+    fn mul(self, other: &'b Scalar) -> Self::Output {
+        mul(self, other)
+    }
+}
+
+impl<T: Into<f64>> From<T> for Scalar {
+    fn from(value: T) -> Self {
+        let value = value.into();
+        Self::from_f64(value)
+    }
+}
+
+impl Neg for Scalar {
+    type Output = Scalar;
+    fn neg(self) -> Self::Output {
+        mul(&self, &Scalar::from_f64(-1.0))
+    }
+}
+
+impl<'a> Neg for &'a Scalar {
+    type Output = Scalar;
+    fn neg(self) -> Self::Output {
+        mul(self, &Scalar::from_f64(-1.0))
+    }
+}
+
+impl Sub<Scalar> for Scalar {
+    type Output = Scalar;
+    fn sub(self, other: Scalar) -> Self::Output {
+        add(&self, &(-other))
+    }
+}
+
+impl<'a, 'b> Sub<&'b Scalar> for &'a Scalar {
+    type Output = Scalar;
+    fn sub(self, other: &'b Scalar) -> Self::Output {
+        add(self, &(-other))
+    }
+}
+
+impl Sum for Scalar {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Scalar::from_f64(0.0), |acc, x| acc + x)
     }
 }
