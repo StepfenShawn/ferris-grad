@@ -18,7 +18,7 @@ pub enum Operation {
 
 type PropagateFn = fn(&_Scalar);
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct _Scalar {
     data: f64,
     grad: f64,
@@ -27,8 +27,20 @@ pub struct _Scalar {
     propagate_fn: Option<PropagateFn>,
 }
 
-#[derive(Debug, Clone)]
+impl std::fmt::Display for _Scalar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+
+#[derive(Clone)]
 pub struct Scalar(Rc<RefCell<_Scalar>>);
+
+impl std::fmt::Display for Scalar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data())
+    }
+}
 
 impl Hash for Scalar {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -72,6 +84,15 @@ impl Scalar {
 
     pub fn data(&self) -> f64 {
         self.0.borrow().data
+    }
+
+    pub fn zero_grad(&self) {
+        self.0.borrow_mut().grad = 0.;
+    }
+
+    pub fn adjust(&self, factor: f64) {
+        let mut value = self.0.borrow_mut();
+        value.data += factor * value.grad;
     }
 
     pub fn backward(&self) {
@@ -134,11 +155,15 @@ impl Scalar {
 }
 fn add(a: &Scalar, b: &Scalar) -> Scalar {
     let propagate_fn = |v: &_Scalar| {
-        let mut first_scalar = v.prev[0].borrow_mut();
-        let mut second_scalar = v.prev[1].borrow_mut();
-
-        first_scalar.grad += v.grad;
-        second_scalar.grad += v.grad;
+        if v.prev[0] == v.prev[1] {
+            let mut s = v.prev[0].borrow_mut();
+            s.grad += 2.0 * v.grad;
+        } else {
+            let mut first_scalar = v.prev[0].borrow_mut();
+            let mut second_scalar = v.prev[1].borrow_mut();
+            first_scalar.grad += v.grad;
+            second_scalar.grad += v.grad;
+        }
     };
 
     let result = a.data() + b.data();
@@ -154,11 +179,15 @@ fn add(a: &Scalar, b: &Scalar) -> Scalar {
 
 fn mul(a: &Scalar, b: &Scalar) -> Scalar {
     let propagate_fn = |v: &_Scalar| {
-        let mut first_scalar = v.prev[0].borrow_mut();
-        let mut second_scalar = v.prev[1].borrow_mut();
-
-        first_scalar.grad += second_scalar.data * v.grad;
-        second_scalar.grad += first_scalar.data * v.grad;
+        if v.prev[0] == v.prev[1] {
+            let mut s = v.prev[0].borrow_mut();
+            s.grad += 2.0 * s.data * v.grad;
+        } else {
+            let mut first_scalar = v.prev[0].borrow_mut();
+            let mut second_scalar = v.prev[1].borrow_mut();
+            first_scalar.grad += second_scalar.data * v.grad;
+            second_scalar.grad += first_scalar.data * v.grad;
+        }
     };
 
     let result = a.data() * b.data();

@@ -12,7 +12,7 @@ fn main() -> Result<()> {
         .iter()
         .flatten()
         .map(|x| (*x).into())
-        .collect::<Vec<Scalar>>(),
+        .collect(),
         [4, 3].into(),
     )?;
 
@@ -20,22 +20,35 @@ fn main() -> Result<()> {
         vec![1.0, 2.0, 3.0, 2.0]
             .iter()
             .map(|x| (*x).into())
-            .collect::<Vec<Scalar>>(),
-        [1, 4].into(),
+            .collect(),
+        [4, 1].into(),
     )?;
 
-    let network = MLP::new(vec![Linear::new(3, 4)]);
-    println!("{:?}", training_inputs);
-    println!("{:?}", network);
+    let mut network = MLP::new(vec![
+        Linear::new(3, 4),
+        Linear::new(4, 4),
+        Linear::new(4, 1),
+    ]);
+    let lr = 0.00005;
+    for i in 0..500 {
+        let diff = &network.forward(&training_inputs) - &target_outputs;
+        let loss = diff.mul(&diff)?.sum();
+        println!("Step {}: Loss: {:?}", i + 1, loss.data());
 
-    for i in 0..100 {
-        let loss = (&network.forward(&training_inputs) - &target_outputs).sum();
+        network.parameters().iter().for_each(|p| {
+            p.for_each(|s| s.zero_grad());
+        });
+
         loss.backward();
-        println!("Loss: {:?}", loss.data());
-        // for param in network.parameters() {
-        //     let grad = param.grad() * 0.01;
-        //     param.data = param.data - grad;
-        // }
+        network.parameters().iter().for_each(|p| {
+            p.for_each(|s| s.adjust(-lr));
+        });
     }
+
+    let input = Tensor::from_vec(
+        vec![1.0, 1.0, 1.0].iter().map(|x| (*x).into()).collect(),
+        [1, 3].into(),
+    )?;
+    println!("{}", network.forward(&input));
     Ok(())
 }

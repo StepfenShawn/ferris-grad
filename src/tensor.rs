@@ -4,9 +4,15 @@ use crate::scalar::Scalar;
 use anyhow::{Ok, Result, anyhow};
 use ndarray::{ArrayD, Dimension, IntoDimension, Ix2, IxDyn};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Tensor {
     data: ArrayD<Scalar>,
+}
+
+impl std::fmt::Display for Tensor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data)
+    }
 }
 
 impl Tensor {
@@ -94,13 +100,22 @@ impl Tensor {
     }
 
     pub fn sub(&self, other: &Tensor) -> Result<Tensor> {
-        let result = &self.data - &self.data;
+        let result = &self.data - &other.data;
         Ok(Self::new(result))
     }
 
     pub fn mul(&self, other: &Tensor) -> Result<Tensor> {
         let result = &self.data * &other.data;
         Ok(Self::new(result))
+    }
+
+    pub fn for_each<F>(&self, f: F)
+    where
+        F: Fn(&Scalar),
+    {
+        for s in self.data.iter() {
+            f(s)
+        }
     }
 }
 
