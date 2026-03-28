@@ -4,9 +4,6 @@ Pytorch-like autograd engine in Rust.
 # Examples
 tensor api:  
 ```rust
-use anyhow::Result;
-use ferris_grad::Tensor;
-
 fn main() -> Result<()> {
     let a = Tensor::from_vec(vec![1.0.into(), 2.0.into(), 3.0.into()], [3, 1].into())?;
     let b = Tensor::rand([3, 1].into())?;
@@ -17,11 +14,21 @@ fn main() -> Result<()> {
     Ok(())
 }
 ```
+backward:  
+```rust
+fn main() -> Result<()> {
+    let a = Scalar::from_f64(2.);
+    let b = Scalar::from_f64(3.);
+    let c = &a * &b;
+    let l = &c + &a;
+    l.backward();
+    println!("{}", a.grad());
+    println!("{}", b.grad());
+    Ok(())
+}
+```
 sgd implement in ferrs_grad:    
 ```rust
-use anyhow::{Ok, Result};
-use ferris_grad::{Linear, MLP, Tensor, nn::Module, scalar::Scalar};
-
 fn main() -> Result<()> {
     let training_inputs = Tensor::from_vec(
         vec![

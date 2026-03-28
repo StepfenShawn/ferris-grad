@@ -1,5 +1,5 @@
 use anyhow::{Ok, Result};
-use ferris_grad::{Linear, MLP, Tensor, nn::Module, scalar::Scalar};
+use ferris_grad::{Linear, MLP, Tensor, nn::Module};
 
 fn main() -> Result<()> {
     let training_inputs = Tensor::from_vec(
