@@ -13,6 +13,9 @@ pub enum Operation {
     Add,
     Mul,
     Pow,
+    Log,
+    Exp,
+    Relu,
     Tanh,
 }
 
@@ -133,6 +136,54 @@ impl Scalar {
             grad: 0.,
             op: Operation::Pow,
             prev: vec![self.clone(), other.clone()],
+            propagate_fn: Some(propagate_fn),
+        })
+    }
+
+    pub fn log(&self) -> Scalar {
+        let result = self.data().ln();
+        let propagate_fn = |v: &_Scalar| {
+            let mut prev = v.prev[0].borrow_mut();
+            prev.grad += (1. / prev.data) * v.grad;
+        };
+
+        Scalar::new(_Scalar {
+            data: result,
+            grad: 0.,
+            op: Operation::Log,
+            prev: vec![self.clone()],
+            propagate_fn: Some(propagate_fn),
+        })
+    }
+
+    pub fn exp(&self) -> Scalar {
+        let result = self.data().exp();
+        let propagate_fn = |v: &_Scalar| {
+            let mut prev = v.prev[0].borrow_mut();
+            prev.grad += prev.data.exp() * v.grad;
+        };
+
+        Scalar::new(_Scalar {
+            data: result,
+            grad: 0.,
+            op: Operation::Exp,
+            prev: vec![self.clone()],
+            propagate_fn: Some(propagate_fn),
+        })
+    }
+
+    pub fn relu(&self) -> Scalar {
+        let result = self.data().max(0.);
+        let propagate_fn = |v: &_Scalar| {
+            let mut prev = v.prev[0].borrow_mut();
+            prev.grad += (if prev.data > 0. { 1. } else { 0. }) * v.grad;
+        };
+
+        Scalar::new(_Scalar {
+            data: result,
+            grad: 0.,
+            op: Operation::Relu,
+            prev: vec![self.clone()],
             propagate_fn: Some(propagate_fn),
         })
     }
