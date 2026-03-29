@@ -6,7 +6,7 @@ fn main() -> Result<()> {
     let b = Tensor::rand([3, 1].into())?;
     let c = &a * &b;
     println!("{}", c);
-    c.get((1, 0)).backward();
-    println!("{}", a.get((1, 0)).grad());
+    c[(1, 0)].backward();
+    println!("{}", a[(1, 0)].grad());
     Ok(())
 }

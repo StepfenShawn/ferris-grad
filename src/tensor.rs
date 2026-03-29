@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Index, Mul, Sub};
 
 use crate::scalar::Scalar;
 use anyhow::{Ok, Result, anyhow};
@@ -109,13 +109,8 @@ impl Tensor {
         Ok(Self::new(result))
     }
 
-    pub fn for_each<F>(&self, f: F)
-    where
-        F: Fn(&Scalar),
-    {
-        for s in self.data.iter() {
-            f(s)
-        }
+    pub fn for_each<F: Fn(&Scalar)>(&self, f: F) {
+        self.data.for_each(f);
     }
 }
 
@@ -162,3 +157,22 @@ impl<'a, 'b> Mul<&'b Tensor> for &'a Tensor {
         Tensor::mul(self, other).expect("failed to mul tensors")
     }
 }
+
+macro_rules! impl_index_trait {
+    ($t: tt) => {
+        impl Index<$t> for Tensor {
+            type Output = Scalar;
+
+            fn index(&self, index: $t) -> &Self::Output {
+                self.get(index)
+            }
+        }
+    };
+}
+
+impl_index_trait!(usize);
+impl_index_trait!((usize, usize));
+impl_index_trait!((usize, usize, usize));
+impl_index_trait!((usize, usize, usize, usize));
+impl_index_trait!((usize, usize, usize, usize, usize));
+impl_index_trait!((usize, usize, usize, usize, usize, usize));
