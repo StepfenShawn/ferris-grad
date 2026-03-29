@@ -93,6 +93,10 @@ impl Scalar {
         self.0.borrow_mut().grad = 0.;
     }
 
+    pub fn apply<F: Fn(f64) -> f64>(&self, f: F) {
+        self.0.borrow_mut().data = f(self.data());
+    }
+
     pub fn adjust(&self, factor: f64) {
         let mut value = self.0.borrow_mut();
         value.data += factor * value.grad;

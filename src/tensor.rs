@@ -109,8 +109,8 @@ impl Tensor {
         Ok(Self::new(result))
     }
 
-    pub fn for_each<F: Fn(&Scalar)>(&self, f: F) {
-        self.data.for_each(f);
+    pub fn for_each<F: FnMut(&Scalar)>(&self, f: F) {
+        self.data.iter().for_each(f);
     }
 }
 
