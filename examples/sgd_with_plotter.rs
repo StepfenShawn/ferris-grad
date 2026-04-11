@@ -7,7 +7,7 @@ fn plot_loss_curve(path: &str, losses: &[f64]) -> Result<()> {
     if losses.is_empty() {
         return Ok(());
     }
-    let root = BitMapBackend::new(path, (900, 600)).into_drawing_area();
+    let root = BitMapBackend::new(path, (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let n = losses.len();
