@@ -65,6 +65,11 @@ impl Tensor {
         self.data.iter().map(|x| x.clone()).sum()
     }
 
+    pub fn mean(&self) -> Scalar {
+        let n = self.shape().iter().fold(1., |acc, s| acc * (*s as f64));
+        self.sum() * Scalar::from_f64(1. / n)
+    }
+
     pub fn dot(&self, other: &Tensor) -> Result<Tensor> {
         let lhs = self.data.view().into_dimensionality::<Ix2>()?;
         let rhs = other.data.view().into_dimensionality::<Ix2>()?;
@@ -129,6 +134,10 @@ impl Tensor {
 
     pub fn for_each<F: FnMut(&Scalar)>(&self, f: F) {
         self.data.iter().for_each(f);
+    }
+
+    pub fn t(&self) -> Tensor {
+        Self::new(self.data.t().to_owned())
     }
 }
 
