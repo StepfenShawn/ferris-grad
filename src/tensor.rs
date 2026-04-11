@@ -109,6 +109,24 @@ impl Tensor {
         Ok(Self::new(result))
     }
 
+    /// Element-wise unary map; shape is preserved.
+    pub fn map_scalars<F>(&self, f: F) -> Tensor
+    where
+        F: FnMut(Scalar) -> Scalar,
+    {
+        let shape = self.shape();
+        let v: Vec<Scalar> = self.data.iter().cloned().map(f).collect();
+        Self::from_vec(v, shape).expect("shape unchanged")
+    }
+
+    pub fn relu(&self) -> Tensor {
+        self.map_scalars(|s| s.relu())
+    }
+
+    pub fn tanh(&self) -> Tensor {
+        self.map_scalars(|s| s.tanh())
+    }
+
     pub fn for_each<F: FnMut(&Scalar)>(&self, f: F) {
         self.data.iter().for_each(f);
     }

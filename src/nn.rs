@@ -17,26 +17,37 @@ impl Linear {
     }
 }
 
+/// One step in a [`Sequential`] stack: affine layer or element-wise activation.
 #[derive(Clone)]
-pub struct MLP {
-    layers: Vec<Linear>,
+pub enum Block {
+    Linear(Linear),
+    Relu,
+    Tanh,
 }
 
-impl std::fmt::Display for MLP {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let info = self
-            .layers
-            .iter()
-            .map(|l| format!("w: {} b: {}\n", l.w, l.b))
-            .collect::<Vec<String>>()
-            .concat();
-        write!(f, "MLP:\n {}", info)
+/// Ordered list of blocks (e.g. `Linear` → `Relu` → `Linear` → …).
+#[derive(Clone)]
+pub struct Sequential {
+    blocks: Vec<Block>,
+}
+
+impl Sequential {
+    pub fn new(blocks: Vec<Block>) -> Self {
+        Sequential { blocks }
     }
 }
 
-impl MLP {
-    pub fn new(layers: Vec<Linear>) -> MLP {
-        MLP { layers }
+impl std::fmt::Display for Sequential {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Sequential:")?;
+        for (i, b) in self.blocks.iter().enumerate() {
+            match b {
+                Block::Linear(l) => writeln!(f, "  [{i}] Linear w: {} b: {}", l.w, l.b)?,
+                Block::Relu => writeln!(f, "  [{i}] Relu")?,
+                Block::Tanh => writeln!(f, "  [{i}] Tanh")?,
+            }
+        }
+        Ok(())
     }
 }
 
@@ -58,18 +69,34 @@ impl Module for Linear {
     }
 }
 
-impl Module for MLP {
+impl Module for Block {
     fn parameters(&mut self) -> Vec<&mut Tensor> {
-        self.layers
+        match self {
+            Block::Linear(l) => l.parameters(),
+            Block::Relu | Block::Tanh => vec![],
+        }
+    }
+
+    fn forward(&self, inputs: &Tensor) -> Tensor {
+        match self {
+            Block::Linear(l) => l.forward(inputs),
+            Block::Relu => inputs.relu(),
+            Block::Tanh => inputs.tanh(),
+        }
+    }
+}
+
+impl Module for Sequential {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
+        self.blocks
             .iter_mut()
-            .map(|layer| layer.parameters())
-            .flatten()
+            .flat_map(|b| b.parameters())
             .collect()
     }
 
     fn forward(&self, inputs: &Tensor) -> Tensor {
-        self.layers
+        self.blocks
             .iter()
-            .fold(inputs.clone(), |acc, layer| layer.forward(&acc))
+            .fold(inputs.clone(), |acc, b| b.forward(&acc))
     }
 }

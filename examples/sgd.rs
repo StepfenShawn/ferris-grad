@@ -1,5 +1,5 @@
 use anyhow::{Ok, Result};
-use ferris_grad::{Linear, MLP, Tensor, nn::Module};
+use ferris_grad::{Block, Linear, Sequential, Tensor, nn::Module};
 
 fn main() -> Result<()> {
     let training_inputs = Tensor::from_vec(
@@ -24,10 +24,12 @@ fn main() -> Result<()> {
         [4, 1].into(),
     )?;
 
-    let mut network = MLP::new(vec![
-        Linear::new(3, 4),
-        Linear::new(4, 4),
-        Linear::new(4, 1),
+    let mut network = Sequential::new(vec![
+        Block::Linear(Linear::new(3, 4)),
+        Block::Relu,
+        Block::Linear(Linear::new(4, 4)),
+        Block::Relu,
+        Block::Linear(Linear::new(4, 1)),
     ]);
     let lr = 0.00005;
     for i in 0..500 {
