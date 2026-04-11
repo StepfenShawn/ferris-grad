@@ -1,5 +1,5 @@
 # ferris_grad
-Pytorch-like autograd engine in Rust.    
+A PyTorch-like autograd engine in under 1000 lines of Rust code.🦀    
 
 # Examples
 tensor api:  

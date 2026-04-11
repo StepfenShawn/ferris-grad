@@ -2,6 +2,12 @@
 name = "ferris_grad"
 version = "0.1.0"
 edition = "2024"
+authors = ["Stepfen Shawn <m18824909883@163.com>"]
+license = "MIT"
+description = "A PyTorch-like autograd engine in under 1000 lines of Rust code.🦀"
+repository = "https://github.com/StepfenShawn/ferris-grad"
+documentation = "https://docs.rs/ferris-grad"
+readme = "README.md"
 
 [dependencies]
 anyhow = "1.0.101"

@@ -33,7 +33,7 @@ fn main() -> Result<()> {
     for i in 0..500 {
         let diff = &network.forward(&training_inputs) - &target_outputs;
         let loss = diff.mul(&diff)?.sum();
-        println!("[step {}] loss: {:?}", i + 1, loss.data());
+        println!("step {} | loss: {:?}", i + 1, loss.data());
         loss.backward();
         network.parameters().iter().for_each(|p| {
             p.for_each(|s| {

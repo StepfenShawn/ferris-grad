@@ -10,11 +10,11 @@ const BLOCK_SIZE: usize = 32;
 const N_HEAD: usize = 8;
 const HEAD_DIM: usize = N_EMBD / N_HEAD;
 
-const LEARNING_RATE: f64 = 0.0001;
+const LEARNING_RATE: f64 = 0.0005;
 const BETA1: f64 = 0.85;
 const BETA2: f64 = 0.99;
 const EPS_ADAM: f64 = 1e-8;
-const NUM_STEPS: usize = 500;
+const NUM_STEPS: usize = 1000;
 const TEMPERATURE: f64 = 0.5;
 
 fn gauss_08() -> Scalar {
@@ -306,7 +306,7 @@ fn main() -> Result<()> {
         );
     }
 
-    println!("\n--- inference (new, hallucinated names) ---");
+    println!("\n--- 推理 ---");
     let mut rng_inf = rand::rngs::StdRng::seed_from_u64(43);
     for sample_idx in 0..20 {
         let mut keys: Vec<Vec<Tensor>> = (0..N_LAYER).map(|_| Vec::new()).collect();
