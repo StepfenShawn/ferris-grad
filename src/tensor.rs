@@ -187,6 +187,11 @@ impl Tensor {
         self.map_scalars(|s| s.tanh())
     }
 
+    /// Applies `sigmoid` to every element (shape unchanged).
+    pub fn sigmoid(&self) -> Tensor {
+        self.map_scalars(|s| s.sigmoid())
+    }
+
     /// Visits each scalar reference in storage order.
     pub fn for_each<F: FnMut(&Scalar)>(&self, f: F) {
         self.data.iter().for_each(f);

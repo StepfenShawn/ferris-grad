@@ -18,6 +18,7 @@ pub enum Operation {
     Exp,
     Relu,
     Tanh,
+    Sigmoid,
 }
 
 type PropagateFn = fn(&_Scalar);
@@ -219,6 +220,24 @@ impl Scalar {
             data: result,
             grad: 0.,
             op: Operation::Tanh,
+            prev: vec![self.clone()],
+            propagate_fn: Some(propagate_fn),
+        })
+    }
+
+    /// sigmoid function with autograd.
+    pub fn sigmoid(&self) -> Scalar {
+        let result = 1. / (1. + self.data());
+        let propagate_fn = |v: &_Scalar| {
+            let mut prev = v.prev[0].borrow_mut();
+            let s = 1. / (1. + prev.data);
+            prev.grad += (s * (1. - s)) * v.grad;
+        };
+
+        Scalar::new(_Scalar {
+            data: result,
+            grad: 0.,
+            op: Operation::Sigmoid,
             prev: vec![self.clone()],
             propagate_fn: Some(propagate_fn),
         })
