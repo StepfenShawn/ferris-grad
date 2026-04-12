@@ -8,5 +8,8 @@ fn main() -> Result<()> {
     println!("{}", c);
     c[(1, 0)].backward();
     println!("{}", a[(1, 0)].grad());
+
+    let d = Tensor::stack(vec![a.clone(), a.clone()], 0)?;
+    println!("{}", d);
     Ok(())
 }

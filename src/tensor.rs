@@ -2,7 +2,7 @@ use std::ops::{Add, Index, Mul, Sub};
 
 use crate::scalar::Scalar;
 use anyhow::{Ok, Result, anyhow};
-use ndarray::{ArrayD, Dimension, IntoDimension, Ix2, IxDyn};
+use ndarray::{ArrayD, ArrayView, Axis, Dimension, IntoDimension, Ix2, IxDyn};
 
 #[derive(Clone)]
 pub struct Tensor {
@@ -73,6 +73,30 @@ impl Tensor {
     /// Returns the tensor shape as a vector of axis lengths.
     pub fn shape(&self) -> Vec<usize> {
         self.data.shape().to_vec()
+    }
+
+    /// Stacks a list of tensors along a given axis.
+    pub fn stack(tensors: Vec<Tensor>, axis: usize) -> Result<Tensor> {
+        let arr = ndarray::stack(
+            Axis(axis),
+            &tensors
+                .iter()
+                .map(|t| t.data.view())
+                .collect::<Vec<ArrayView<Scalar, IxDyn>>>(),
+        )?;
+        Ok(Self::new(arr))
+    }
+
+    /// Concatenates a list of tensors along a given axis.
+    pub fn concat(tensors: Vec<Tensor>, axis: usize) -> Result<Tensor> {
+        let arr = ndarray::concatenate(
+            Axis(axis),
+            &tensors
+                .iter()
+                .map(|t| t.data.view())
+                .collect::<Vec<ArrayView<Scalar, IxDyn>>>(),
+        )?;
+        Ok(Self::new(arr))
     }
 
     /// Borrows the scalar at `index` (panics if out of bounds).

@@ -52,24 +52,37 @@ impl std::fmt::Display for Sequential {
 }
 
 pub trait Module {
-    // Retrieve all trainable parameters as a list of tensor.
-    fn parameters(&mut self) -> Vec<&mut Tensor>;
+    type Input<'a>
+    where
+        Self: 'a;
+    type Output;
 
-    // Perform a forward pass through the module.
-    fn forward(&self, inputs: &Tensor) -> Tensor;
+    fn parameters(&mut self) -> Vec<&mut Tensor>;
+    fn forward<'a>(&self, inputs: Self::Input<'a>) -> Self::Output
+    where
+        Self: 'a;
 }
 
 impl Module for Linear {
+    type Input<'a> = &'a Tensor;
+    type Output = Tensor;
+
     fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![&mut self.w, &mut self.b]
     }
 
-    fn forward(&self, inputs: &Tensor) -> Tensor {
+    fn forward<'a>(&self, inputs: Self::Input<'a>) -> Self::Output
+    where
+        Self: 'a,
+    {
         &inputs.dot(&self.w).unwrap() + &self.b
     }
 }
 
 impl Module for Block {
+    type Input<'a> = &'a Tensor;
+    type Output = Tensor;
+
     fn parameters(&mut self) -> Vec<&mut Tensor> {
         match self {
             Block::Linear(l) => l.parameters(),
@@ -77,7 +90,10 @@ impl Module for Block {
         }
     }
 
-    fn forward(&self, inputs: &Tensor) -> Tensor {
+    fn forward<'a>(&self, inputs: Self::Input<'a>) -> Self::Output
+    where
+        Self: 'a,
+    {
         match self {
             Block::Linear(l) => l.forward(inputs),
             Block::Relu => inputs.relu(),
@@ -87,6 +103,9 @@ impl Module for Block {
 }
 
 impl Module for Sequential {
+    type Input<'a> = &'a Tensor;
+    type Output = Tensor;
+
     fn parameters(&mut self) -> Vec<&mut Tensor> {
         self.blocks
             .iter_mut()
@@ -94,7 +113,10 @@ impl Module for Sequential {
             .collect()
     }
 
-    fn forward(&self, inputs: &Tensor) -> Tensor {
+    fn forward<'a>(&self, inputs: Self::Input<'a>) -> Self::Output
+    where
+        Self: 'a,
+    {
         self.blocks
             .iter()
             .fold(inputs.clone(), |acc, b| b.forward(&acc))

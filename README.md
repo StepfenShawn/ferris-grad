@@ -1,85 +1,44 @@
 # ferris_grad
 A PyTorch-like autograd engine in under 1000 lines of Rust code.🦀    
 
-# Examples
-tensor api:  
+# How ferris_grad works?
+ferris_grad is just build in 3 files:
+| file | description |
+| --- | --- |
+| `scalar.rs` | implement the scalar data structure, compute graph, backward rule, and basic operations. |
+| `tensor.rs` | implement the tensor data structure and basic operations. |
+| `nn.rs` | implement the neural network layers and modules. |
+
+# How to use ferris_grad?
+Add this to your `Cargo.toml`:
+```toml
+[dependencies]
+ferris_grad = "*"
+```
+and then you can use `ferris_grad` in your project:
 ```rust
+use anyhow::Result;
+use ferris_grad::{Tensor, nn::Module};
+
 fn main() -> Result<()> {
     let a = Tensor::from_vec(vec![1.0.into(), 2.0.into(), 3.0.into()], [3, 1].into())?;
     let b = Tensor::rand([3, 1].into())?;
     let c = &a * &b;
     println!("{}", c);
-    c[(1, 0)].backward();
-    println!("{}", a[(1, 0)].grad());
     Ok(())
 }
 ```
-backward:  
-```rust
-fn main() -> Result<()> {
-    let a = Scalar::from_f64(2.);
-    let b = Scalar::from_f64(3.);
-    let c = &a * &b;
-    let l = &c + &a;
-    l.backward();
-    println!("{}", a.grad());
-    println!("{}", b.grad());
-    Ok(())
-}
-```
-sgd implement in ferrs_grad:    
-```rust
-fn main() -> Result<()> {
-    let training_inputs = Tensor::from_vec(
-        vec![
-            vec![2.0, 3.0, 11.0],
-            vec![30.0, 1.0, 0.5],
-            vec![5.5, 1.0, 6.0],
-            vec![11.0, 1.0, 1.0],
-        ]
-        .iter()
-        .flatten()
-        .map(|x| (*x).into())
-        .collect(),
-        [4, 3].into(),
-    )?;
 
-    let target_outputs = Tensor::from_vec(
-        vec![1.0, 2.0, 3.0, 2.0]
-            .iter()
-            .map(|x| (*x).into())
-            .collect(),
-        [4, 1].into(),
-    )?;
+# Examples
+All the examples are in the `examples` folder.
+| file | description |
+| --- | --- |
+| [`examples/tensor_example.rs`](examples/tensor_example.rs) | basic usage of tensor api. |
+| [`examples/backward_scalar.rs`](examples/backward_scalar.rs) | basic usage of backward api. |
+| [`examples/sgd.rs`](examples/sgd.rs) | training a MLP example using sgd. |
+| [`examples/sgd_with_plotter.rs`](examples/sgd_with_plotter.rs) | training a MLP example using sgd with plotter. |
+| [`examples/rnn.rs`](examples/rnn.rs) | training a recurrent neural network in ferris_grad. |
+| [`examples/gpt.rs`](examples/gpt.rs) | training a mini pre-trained GPT in ferris_grad! |
 
-    let mut network = Sequential::new(vec![
-        Block::Linear(Linear::new(3, 4)),
-        Block::Relu,
-        Block::Linear(Linear::new(4, 4)),
-        Block::Relu,
-        Block::Linear(Linear::new(4, 1)),
-    ]);
-    let lr = 0.00005;
-    
-    for i in 0..500 {
-        let diff = &network.forward(&training_inputs) - &target_outputs;
-        let loss = diff.mul(&diff)?.sum();
-        println!("[step {}] loss: {:?}", i + 1, loss.data());
-        loss.backward();
-        network.parameters().iter().for_each(|p| {
-            p.for_each(|s| {
-                s.adjust(-lr);
-                s.zero_grad();
-            });
-        });
-    }
-
-    let input = Tensor::from_vec(
-        vec![1.0, 1.0, 1.0].iter().map(|x| (*x).into()).collect(),
-        [1, 3].into(),
-    )?;
-    println!("{}", network.forward(&input));
-    Ok(())
-}
-
-```
+# License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
