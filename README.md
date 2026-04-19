@@ -38,7 +38,7 @@ All the examples are in the `examples` folder.
 | [`examples/sgd.rs`](examples/sgd.rs) | training a MLP example using sgd. |
 | [`examples/sgd_with_plotter.rs`](examples/sgd_with_plotter.rs) | training a MLP example using sgd with plotter. |
 | [`examples/rnn.rs`](examples/rnn.rs) | training a recurrent neural network in ferris_grad. |
-| [`examples/gpt.rs`](examples/gpt.rs) | training a mini pre-trained GPT in ferris_grad! |
+| [`examples/gpt.rs`](examples/gpt.rs) | training a mini GPT in ferris_grad! |
 
 # License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
