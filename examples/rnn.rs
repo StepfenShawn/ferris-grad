@@ -64,7 +64,44 @@ struct RNN {
     layers: Vec<Layer>,
 }
 
+impl RNN {
+    pub fn new(layers: Vec<Layer>) -> Self {
+        RNN { layers }
+    }
+}
+
+impl Module for RNN {
+    type Input<'a> = (&'a Tensor, usize);
+    type Output = Result<Tensor>;
+
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
+        self.layers
+            .iter_mut()
+            .flat_map(|l| l.parameters())
+            .collect()
+    }
+
+    fn forward<'a>(&self, inputs: Self::Input<'a>) -> Self::Output
+    where
+        Self: 'a,
+    {
+        let (input, hidden_size) = inputs;
+        let binding = input.shape();
+        let batch_size = binding.first().unwrap();
+        let mut h = Tensor::zeros([*batch_size, hidden_size].into())?;
+
+        let mut outputs = Vec::new();
+
+        self.layers.iter().for_each(|layer| {
+            let (h_now, out) = layer.forward((&input, &h)).unwrap();
+            h = h_now;
+            outputs.push(out);
+        });
+        Ok(Tensor::stack(outputs, 0)?)
+    }
+}
+
 fn main() -> Result<()> {
-    // let rnn = RNN::new();
+    let rnn = RNN::new(vec![]);
     Ok(())
 }

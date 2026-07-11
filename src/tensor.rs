@@ -99,6 +99,11 @@ impl Tensor {
         Ok(Self::new(arr))
     }
 
+    /// Returns a tensor with all specified dimensions of size `1` removed.
+    pub fn squeeze(&self) -> Tensor {
+        Self::new(self.data.clone().squeeze().into_owned())
+    }
+
     /// Borrows the scalar at `index` (panics if out of bounds).
     pub fn get<I>(&self, index: I) -> &Scalar
     where

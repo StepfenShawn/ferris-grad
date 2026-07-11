@@ -23,7 +23,7 @@ pub enum Block {
     Linear(Linear),
     Relu,
     Tanh,
-    Sigmoid
+    Sigmoid,
 }
 
 /// Ordered list of blocks (e.g. `Linear` → `Relu` → `Linear` → …).
@@ -46,7 +46,7 @@ impl std::fmt::Display for Sequential {
                 Block::Linear(l) => writeln!(f, "  [{i}] Linear w: {} b: {}", l.w, l.b)?,
                 Block::Relu => writeln!(f, "  [{i}] Relu")?,
                 Block::Tanh => writeln!(f, "  [{i}] Tanh")?,
-                Block::Sigmoid => writeln!(f, " [{i}] Sigmoid")?
+                Block::Sigmoid => writeln!(f, " [{i}] Sigmoid")?,
             }
         }
         Ok(())
@@ -100,7 +100,7 @@ impl Module for Block {
             Block::Linear(l) => l.forward(inputs),
             Block::Relu => inputs.relu(),
             Block::Tanh => inputs.tanh(),
-            Block::Sigmoid => inputs.sigmoid()
+            Block::Sigmoid => inputs.sigmoid(),
         }
     }
 }

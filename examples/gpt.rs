@@ -2,6 +2,7 @@ use anyhow::{Ok, Result};
 use ferris_grad::{Tensor, scalar::Scalar};
 use rand::seq::SliceRandom;
 use rand::{RngExt, SeedableRng};
+use std::collections::HashMap;
 use std::fs;
 
 const N_LAYER: usize = 1;
@@ -10,7 +11,7 @@ const BLOCK_SIZE: usize = 32;
 const N_HEAD: usize = 8;
 const HEAD_DIM: usize = N_EMBD / N_HEAD;
 
-const LEARNING_RATE: f64 = 0.0005;
+const LEARNING_RATE: f64 = 0.002;
 const BETA1: f64 = 0.85;
 const BETA2: f64 = 0.99;
 const EPS_ADAM: f64 = 1e-8;
@@ -245,14 +246,22 @@ fn main() -> Result<()> {
     docs.shuffle(&mut rng);
     println!("num docs: {}", docs.len());
 
-    let uchars: Vec<char> = {
-        let mut set: Vec<char> = docs.iter().flat_map(|s| s.chars()).collect();
+    let utokens: Vec<String> = {
+        let mut set: Vec<String> = docs
+            .iter()
+            .flat_map(|s| s.split_whitespace())
+            .map(|s| s.to_string())
+            .collect();
+
         set.sort_unstable();
         set.dedup();
         set
     };
-    let bos = uchars.len();
-    let vocab_size = uchars.len() + 1;
+
+    println!("{:?}", utokens);
+
+    let bos = utokens.len();
+    let vocab_size = utokens.len() + 1;
     println!("vocab size: {vocab_size}");
 
     let params = GptParams::new(vocab_size)?;
@@ -265,10 +274,10 @@ fn main() -> Result<()> {
     for step in 0..NUM_STEPS {
         let doc = &docs[step % docs.len()];
         let mut tokens = vec![bos];
-        for ch in doc.chars() {
-            let idx = uchars
-                .binary_search(&ch)
-                .expect("char in doc must be in vocab");
+        for token in doc.split_whitespace() {
+            let idx = utokens
+                .binary_search(&token.to_string())
+                .expect("token in doc must be in vocab");
             tokens.push(idx);
         }
         tokens.push(bos);
@@ -335,7 +344,7 @@ fn main() -> Result<()> {
             if token_id == bos {
                 break;
             }
-            sample.push(uchars[token_id]);
+            sample.push_str(&utokens[token_id]);
         }
         println!("sample {:2}: {}", sample_idx + 1, sample);
     }
